@@ -3,6 +3,7 @@ import contextily as ctx
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import networkx as nx
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -55,12 +56,28 @@ def dms_to_decimal(dms_str):
         return None
 
 
+
 # Aplicar la función de conversión a las columnas de latitud y longitud
 data['LATITUD'] = data['LATITUD'].apply(dms_to_decimal)
 data['LONGITUD'] = data['LONGITUD'].apply(dms_to_decimal)
 
 # Filtrar filas con coordenadas nulas (conversiones fallidas)
 data = data.dropna(subset=['LATITUD', 'LONGITUD'])
+
+graph = nx.Graph()
+
+for idx, row in data.iterrows():
+    graph.add_node(idx, pos=(row['LONGITUD'], row['LATITUD']), categoria=row['CAUSA'])
+
+for i in range(len(data)):
+    for j in range(i + 1, len(data)):
+        graph.add_edge(i, j)
+
+pos = nx.get_node_attributes(graph, 'pos')
+plt.figure(figsize=(10, 8))
+nx.draw(graph, pos, with_labels=True, node_size=700, node_color='skyblue', font_size=10, font_weight='bold')
+plt.title('Grafo de Ubicaciones')
+plt.show()
 
 # Convertir a GeoDataFrame
 gdf = gpd.GeoDataFrame(data, geometry=gpd.points_from_xy(data.LONGITUD, data.LATITUD))
